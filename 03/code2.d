@@ -58,21 +58,21 @@ Point[] parse(string[] wires)
   return parsedWires;
 }
 
-Points generateLine(Point x, Point y)
+Point[] generateLine(Point x, Point y)
 {
-  Points p;
+  Point[] p;
   if(x.y == y.y)
   {
     foreach(i; min(x.x, y.x) .. max(x.x, y.x))
     {
-        p[Point(i,x.y)] = true;
+        p ~= Point(i,x.y);
     }
   }
   else if (x.x == y.x)
   {
     foreach(i; min(x.y, y.y) .. max(x.y, y.y))
     {
-        p[Point(x.x,i)] = true;
+        p ~= Point(x.x,i);
     }
   }
   else
@@ -87,7 +87,7 @@ Points sparseGrid(Point[] wires)
   foreach(wire; wires)
   {
     auto next = current + wire;
-    foreach(p; generateLine(current, next).keys)
+    foreach(p; generateLine(current, next))
     {
       s[p] = true;
     }
@@ -106,10 +106,27 @@ Points intersect(Points a, Points b)
 }
 
 
+int wireLength(Point a, Point[] wires)
+{
+  int steps;
+  auto current = Point(0,0);
+  foreach(wire; wires)
+  {
+    auto next = current + wire;
+    foreach(p; generateLine(current, next))
+    {
+      if (p == a)
+        return steps;
+      steps++;
+    }
+    current = next;
+  }
+  throw new Exception("No intersection");
+}
 
 void main()
 {
-  auto f = File("input01.txt");
+  auto f = File("input02.txt");
 
   auto lines = f.byLine;
   auto wires1 = lines.front.to!string.split(",").parse;
@@ -123,7 +140,7 @@ void main()
   intersects.remove(Point(0,0));
 
 
-  auto c = minElement!(a=>a.distance)(intersects.keys);
+  auto c = minElement!(a=>a.wireLength(wires1)+ a.wireLength(wires2))(intersects.keys);
   writeln(c);
-  writeln(c.distance);
+  writeln(c.wireLength(wires1) + c.wireLength(wires2));
 }
