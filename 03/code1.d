@@ -8,29 +8,34 @@ import std.conv;
 
 
 alias Point = Vector!int;
-alias Points = bool[Point];
+alias Points = Point[];
 
-
-alias VectorReal = Vector!real;
 struct Vector(T) {
     private T x, y;
 
-    this(T x, T y) {
-        this.x = x;
-        this.y = y;
-    }
-
-    T distance(Point o = Point(0,0))
+    T distance(const Point o = Point(0,0)) const
     {
       return abs(x - o.x) + abs(y - o.y);
     }
 
-    auto opBinary(string op : "+")(Vector rhs) const {
-        return Vector(x + rhs.x, y + rhs.y);
+    int opCmp(ref const Vector!T s) const {
+      if (x < s.x)
+        return -1;
+      else if (x > s.x)
+        return 1;
+      else
+      {
+        if (y < s.y)
+          return -1;
+        else if (y > s.y)
+          return 1;
+        else
+          return 0;
+      }
     }
 
-    auto opBinary(string op : "-")(Vector rhs) const {
-        return Vector(x - rhs.x, y - rhs.y);
+    auto opBinary(string op)(Vector rhs) const {
+        return mixin(`Vector(x`~ op ~`rhs.x, y`~ op ~`rhs.y)`);
     }
 
     void toString(scope void delegate(const(char)[]) sink) const {
@@ -40,9 +45,9 @@ struct Vector(T) {
 }
 
 
-Point[] parse(string[] wires)
+Points parse(string[] wires)
 {
-  Point[] parsedWires;
+  Points parsedWires;
   parsedWires.length = wires.length;
   foreach(i, wire; wires)
   {
@@ -65,14 +70,14 @@ Points generateLine(Point x, Point y)
   {
     foreach(i; min(x.x, y.x) .. max(x.x, y.x))
     {
-        p[Point(i,x.y)] = true;
+        p ~= Point(i,x.y);
     }
   }
   else if (x.x == y.x)
   {
     foreach(i; min(x.y, y.y) .. max(x.y, y.y))
     {
-        p[Point(x.x,i)] = true;
+        p ~= Point(x.x,i);
     }
   }
   else
@@ -80,50 +85,41 @@ Points generateLine(Point x, Point y)
   return p;
 }
 
-Points sparseGrid(Point[] wires)
+Points sparseGrid(Points wires)
 {
   Points s;
   auto current = Point(0,0);
   foreach(wire; wires)
   {
     auto next = current + wire;
-    foreach(p; generateLine(current, next).keys)
+    foreach(p; generateLine(current, next))
     {
-      s[p] = true;
+      s ~= p;
     }
     current = next;
   }
   return s;
 }
 
-Points intersect(Points a, Points b)
-{
-  Points c;
-  foreach(key; a.keys)
-    if (key in b)
-      c[key] = true;
-  return c;
-}
-
-
-
 void main()
 {
-  auto f = File("input01.txt");
+  auto f = File("input02.txt");
 
   auto lines = f.byLine;
   auto wires1 = lines.front.to!string.split(",").parse;
   lines.popFront;
   auto wires2 = lines.front.to!string.split(",").parse;
 
-  auto grid1 = sparseGrid(wires1);
-  auto grid2 = sparseGrid(wires2);
+  auto grid1 = sparseGrid(wires1).sort;
+  auto grid2 = sparseGrid(wires2).sort;
 
-  auto intersects = intersect(grid1, grid2);
-  intersects.remove(Point(0,0));
+  writeln(grid1);
+  writeln(grid2);
+  auto intersects = setIntersection(grid1, grid2);
+  intersects.popFront;
+  writeln(intersects);
 
-
-  auto c = minElement!(a=>a.distance)(intersects.keys);
+  auto c = minElement!(a=>a.distance)(intersects);
   writeln(c);
   writeln(c.distance);
 }
