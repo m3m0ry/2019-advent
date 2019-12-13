@@ -7,8 +7,9 @@ import std.range;
 import std.math : abs, sgn;
 import std.format;
 import std.numeric;
+import std.bigint;
 
-int lcm(int a, int b)
+T lcm(T)(T a, T b)
 {
   return abs((a*b)/gcd(a,b));
 }
@@ -17,12 +18,6 @@ struct Moon
 {
   int[3] pos;
   int[3] vel;
-  int[3] periods;
-
-  bool allPeriods()
-  {
-    return all!"a != 0"(periods.dup);
-  }
 
   bool isPeriod(Moon o, int i)
   {
@@ -77,6 +72,7 @@ void main()
   }
 
   Moon[] init = moons.dup;
+  BigInt[] periods = new BigInt[](3);
   int step = 0;
   while(true)
   {
@@ -91,25 +87,20 @@ void main()
     foreach (i, ref moon; moons)
     {
       moon.applyVelocity;
-      foreach(j; 0..3)
+    }
+
+    foreach (i; 0..3)
+    {
+      if(periods[i] == 0 && zip(moons,init).all!(a => a[0].isPeriod(a[1], i)))
       {
-        if(!moon.periods[j] && moon.isPeriod(init[i], j.to!int))
-        {
-          moon.periods[j] = step;
-        }
+        periods[i] = step.BigInt;
       }
     }
-    if (all!(a => a.allPeriods)(moons))
+
+    if (all!(a => a != 0)(periods))
     {
       break;
     }
   }
-  int[] moonPerios;
-  foreach (moon; moons)
-  {
-    writeln(moon.periods);
-    moonPerios ~= moon.periods.fold!((a,b) => lcm(a,b));
-  }
-  writeln(moonPerios);
-  writeln(moonPerios.fold!((a,b) => lcm(a,b)));
+  writeln(periods.fold!((a,b) => lcm(a,b)));
 }
