@@ -1,3 +1,4 @@
+module code2;
 import std.stdio;
 import std.conv;
 import std.regex;
@@ -8,14 +9,15 @@ import std.algorithm;
 import std.exception;
 import std.array;
 import std.math;
+import std.bigint;
 
-alias Chemical = Tuple!(string, int);
+alias Chemical = Tuple!(string, BigInt);
 Chemical chemical(T)(T react)
 {
   string s;
   int i;
   react.formattedRead!"%d %s"(i, s);
-  return Chemical(s,i);
+  return Chemical(s,i.BigInt);
 }
 
 struct Reaction
@@ -40,7 +42,7 @@ Chemical build(Chemical target, Chemical source, Reaction[] reactions)
 {
   Chemical[] want = [target];
   Chemical[] newWant;
-  int[string] rest;
+  BigInt[string] rest;
   while(!want.all!(a => a[0] == "ORE"))
   {
     foreach(w; want)
@@ -53,7 +55,7 @@ Chemical build(Chemical target, Chemical source, Reaction[] reactions)
       {
         Reaction targetRule = findReaction(w[0], reactions);
         //get rest if any
-        int todo;
+        BigInt todo;
         if(w[0] in rest && rest[w[0]] > 0)
         {
           todo = w[1] - rest[w[0]];
@@ -69,9 +71,23 @@ Chemical build(Chemical target, Chemical source, Reaction[] reactions)
         }
         else if(w[1] > 0)
           todo = w[1];
-        int reacts = ceil(todo.to!real / targetRule.output[1].to!real).to!int;
-        int remainder = targetRule.output[1] * reacts - todo;
-        rest[w[0]] = rest.get(w[0], 0) + remainder;
+        //BigInt reacts = ceil(todo.to!real / targetRule.output[1].to!real).to!int.to!BigInt;
+        //BigInt remainder = targetRule.output[1] * reacts - todo;
+        BigInt q;
+        BigInt r;
+        divMod(todo, targetRule.output[1], q, r);
+        BigInt reacts = q;
+        BigInt remainder;
+        if (r != 0)
+        {
+          reacts = q +1;
+          remainder = targetRule.output[1] - r;
+        }
+
+        if(w[0] in rest)
+          rest[w[0]] += remainder;
+        else if(remainder != 0)
+          rest[w[0]] = remainder;
         foreach(chem; targetRule.input)
         {
           chem[1] *= reacts;
@@ -80,10 +96,9 @@ Chemical build(Chemical target, Chemical source, Reaction[] reactions)
       }
     }
     want = newWant;
-    writeln(rest);
     newWant.length = 0;
   }
-  return want.fold!((a,b) => Chemical("ORE", a[1] + b[1]))(Chemical("ORE", 0));
+  return want.fold!((a,b) => Chemical("ORE", a[1] + b[1]))(Chemical("ORE", 0.BigInt));
 }
 
 void main()
@@ -96,6 +111,25 @@ void main()
                           line.to!string.split(" => ")[0].split(", ").map!( a => chemical(a)).array);
   }
   //reactions.each!(a => a.writeln);
-  auto need = build(Chemical("FUEL", 1), Chemical("ORE", 0), reactions);
-  writeln(need);
+  auto need = build(Chemical("FUEL", 1.BigInt), Chemical("ORE", 0.BigInt), reactions);
+  writeln("Task1: ", need);
+
+  BigInt ore = need[1];
+  BigInt maxOre = BigInt(1_000_000)*BigInt(1_000_000);
+  BigInt step = maxOre;
+  for(BigInt fuel = maxOre/ore;;fuel += step)
+  {
+    need = build(Chemical("FUEL", fuel), Chemical("ORE", 0.BigInt), reactions);
+    ore = need[1];
+    if(ore > maxOre)
+    {
+      if(step == 1)
+      {
+        writeln("Fuel: ", fuel-1);
+        break;
+      }
+      fuel -= step;
+      step /= 10;
+    }
+  }
 }
