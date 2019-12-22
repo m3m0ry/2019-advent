@@ -56,13 +56,20 @@ int[] fft(int[] signal, int[][] matrix){
 
 void main()
 {
-  int[] signal = readText("input03.txt").strip.split("").map!(a => to!int(a)).array;
-  signal = signal.repeat(10_000).joiner.array;
+  int[] signal = readText("input01.txt").strip.split("").map!(a => to!int(a)).array;
+  writeln(signal.length);
   int offset = signal[0..7].map!(a => a.to!string).join("").to!int;
-  int[][] matrix = assemble(signal.length);
+  writeln(offset);
+  signal = signal.repeat(10_000).joiner.drop(offset).array;
+  writeln(signal.length);
   foreach(i; 0..100){
     writeln("Phase: ", i);
-    signal = fft(signal, matrix);
+    int cumulativeSum = 0;
+    foreach(j; iota(signal.length.to!int -1, -1, -1))
+    {
+      cumulativeSum += signal[j];
+      signal[j] = cumulativeSum % 10;
+    }
   }
   writeln(signal[0..8]);
 }
